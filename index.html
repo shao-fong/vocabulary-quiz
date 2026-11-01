@@ -48,7 +48,7 @@
     <div class="bar"><div id="barfill" style="width:0"></div></div>
     <div class="question"><div id="prompt" class="prompt"></div><div id="difficulty" class="hint"></div></div>
     <div id="answer-area"></div>
-    <button id="next" class="primary" style="display:none">下一題</button>
+    <button id="retry-score" class="primary" style="display:none">重試送出成績</button>
   </section>
 
   <section id="result" class="screen">
@@ -67,7 +67,7 @@
 <script>
   const API_URL = (window.APP_CONFIG && window.APP_CONFIG.apiUrl) || 'https://vocabulary-app-api.yahoo-com-tw-860722.workers.dev/api';
   const MODES = {cn2en_choice:'看中文選英文',en2cn_choice:'看英文選中文',cn2en_spell:'看中文拼英文'};
-  const state = {seatNo:'',category:'',mode:'',count:20,quizId:'',questions:[],answers:[],index:0,startedAt:0,timer:null,locked:false,submitting:false};
+  const state = {seatNo:'',category:'',mode:'',count:20,quizId:'',questions:[],answers:[],index:0,startedAt:0,timer:null,advanceTimer:null,locked:false,submitting:false};
   const $ = id => document.getElementById(id);
   function showError(message){const box=$('error');box.textContent=message;box.classList.add('show');setTimeout(()=>box.classList.remove('show'),6000)}
   function screen(id){document.querySelectorAll('.screen').forEach(node=>node.classList.remove('active'));$(id).classList.add('active');$('error').classList.remove('show')}
@@ -101,7 +101,7 @@
     state.seatNo=seat;state.locked=true;$('start').disabled=true;$('start').textContent='題目載入中…';
     try{
       const result=await api('getQuizQuestions',{seatNo:seat,category:state.category,mode:state.mode,questionCount:state.count});
-      state.quizId=result.quizId;state.questions=result.questions;state.answers=[];state.index=0;state.locked=false;screen('quiz');state.startedAt=Date.now();renderQuestion();
+      clearTimeout(state.advanceTimer);state.quizId=result.quizId;state.questions=result.questions;state.answers=[];state.index=0;state.locked=false;state.submitting=false;screen('quiz');state.startedAt=Date.now();renderQuestion();
       clearInterval(state.timer);state.timer=setInterval(updateTimer,500);updateTimer();
     }catch(error){showError(error.message);state.locked=false}
     finally{$('start').disabled=false;$('start').textContent='開始測驗'}
@@ -110,7 +110,7 @@
   function renderQuestion(){
     const q=state.questions[state.index];$('progress').textContent=`第 ${state.index+1} / ${state.questions.length} 題`;$('barfill').style.width=`${state.index/state.questions.length*100}%`;
     $('prompt').textContent=q.prompt;$('difficulty').textContent=`單字難度：${q.difficulty}`;
-    const area=$('answer-area');area.replaceChildren();$('next').style.display='none';state.locked=false;
+    const area=$('answer-area');area.replaceChildren();$('retry-score').style.display='none';$('retry-score').disabled=false;$('retry-score').textContent='重試送出成績';state.locked=false;
     if(state.mode==='cn2en_spell'){
       const speak=document.createElement('button');speak.type='button';speak.className='secondary speak-button';speak.textContent='🔊 唸出英文';speak.addEventListener('click',()=>speakEnglish(state.index));
       const input=document.createElement('input');input.autocomplete='off';input.autocapitalize='none';input.spellcheck=false;input.placeholder='輸入英文單字';input.setAttribute('aria-label','輸入英文單字');
@@ -119,16 +119,22 @@
       const options=document.createElement('div');options.className='options';q.options.forEach(option=>{const button=document.createElement('button');button.className='option';button.textContent=option;button.addEventListener('click',()=>saveAnswer(option,button));options.append(button)});area.append(options);
     }
   }
-  async function speakEnglish(index){if(!('speechSynthesis' in window)){showError('此瀏覽器不支援英文朗讀。');return}try{const result=await api('getPronunciation',{quizId:state.quizId,seatNo:state.seatNo,index});window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(result.word);utterance.lang='en-US';utterance.rate=.88;window.speechSynthesis.speak(utterance)}catch(error){showError(error.message)}}
+  function preferredEnglishVoice(){
+    const voices=window.speechSynthesis.getVoices().filter(voice=>/^en(-|_)/i.test(voice.lang));
+    const preferredNames=[/Samantha/i,/Ava/i,/Allison/i,/Google US English/i,/Microsoft Aria/i,/Microsoft Jenny/i,/Alex/i];
+    for(const pattern of preferredNames){const voice=voices.find(item=>pattern.test(item.name));if(voice)return voice}
+    return voices.find(voice=>/^en-US/i.test(voice.lang))||voices[0]||null;
+  }
+  async function speakEnglish(index){if(!('speechSynthesis' in window)){showError('此瀏覽器不支援英文朗讀。');return}try{const result=await api('getPronunciation',{quizId:state.quizId,seatNo:state.seatNo,index});window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(result.word);utterance.lang='en-US';utterance.rate=.96;utterance.pitch=1;utterance.voice=preferredEnglishVoice();window.speechSynthesis.speak(utterance)}catch(error){showError(error.message)}}
   async function saveAnswer(answer,chosenButton){if(state.locked)return;state.locked=true;const submitted=String(answer).trim();$('answer-area').querySelectorAll('button,input').forEach(el=>el.disabled=true);try{const result=await api('checkAnswer',{quizId:state.quizId,seatNo:state.seatNo,index:state.index,answer:submitted});state.answers[state.index]=submitted;const area=$('answer-area');if(chosenButton){area.querySelectorAll('.option').forEach(button=>{button.disabled=true;if(button.textContent===result.correctAnswer)button.classList.add('correct')});if(!result.isCorrect)chosenButton.classList.add('wrong');else chosenButton.classList.add('correct')}
       else{const feedback=document.createElement('div');feedback.className=`feedback ${result.isCorrect?'correct':'wrong'}`;feedback.textContent=result.isCorrect?'✓ 答對！':`✗ 答錯，正確答案：${result.correctAnswer}`;area.append(feedback)}
       if(chosenButton&&!result.isCorrect){const note=document.createElement('div');note.className='feedback wrong';note.textContent=`正確答案：${result.correctAnswer}`;area.append(note)}
-      $('next').style.display='block';$('next').textContent=state.index===state.questions.length-1?'完成測驗':'下一題'
+      clearTimeout(state.advanceTimer);state.advanceTimer=setTimeout(()=>{if(state.index<state.questions.length-1){state.index++;renderQuestion()}else{finishQuiz()}},2000)
     }catch(error){showError(error.message);state.locked=false;$('answer-area').querySelectorAll('button,input').forEach(el=>el.disabled=false)}}
-  $('next').addEventListener('click',async()=>{if(state.index<state.questions.length-1){state.index++;renderQuestion();return}await finishQuiz()});
-  async function finishQuiz(){if(state.locked===false||state.submitting)return;state.submitting=true;state.locked=true;clearInterval(state.timer);$('next').disabled=true;$('next').textContent='正在批改…';
+  $('retry-score').addEventListener('click',finishQuiz);
+  async function finishQuiz(){if(state.locked===false||state.submitting)return;state.submitting=true;state.locked=true;clearInterval(state.timer);$('retry-score').disabled=true;$('retry-score').textContent='正在送出成績…';
     try{const result=await api('submitScore',{quizId:state.quizId,seatNo:state.seatNo,answers:state.answers});renderResult(result)}
-    catch(error){showError(error.message);state.submitting=false;$('next').disabled=false;$('next').textContent='重試送出成績'}
+    catch(error){showError(error.message);state.submitting=false;$('retry-score').disabled=false;$('retry-score').textContent='重試送出成績';$('retry-score').style.display='block'}
   }
   function renderResult(result){
     $('score').textContent=result.score;$('accuracy').textContent=`${result.accuracyPct}%`;$('correct').textContent=`${result.correct}/${result.total}`;$('time').textContent=`${result.timeSec} 秒`;
@@ -137,9 +143,9 @@
     const body=$('leaderboard');body.replaceChildren();
     if(!result.leaderboard||!result.leaderboard.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.textContent='目前還沒有排行榜紀錄';tr.append(td);body.append(tr)}
     else result.leaderboard.forEach(row=>{const tr=document.createElement('tr');if(row.isMe)tr.className='mine';[row.rank,row.score,`${row.accuracyPct}%`,`${row.correct}/${row.total}`,row.timeSec].forEach(value=>{const td=document.createElement('td');td.textContent=String(value);tr.append(td)});body.append(tr)});
-    screen('result');$('next').disabled=false;$('next').onclick=null;
+    screen('result');$('retry-score').style.display='none';
   }
-  $('again').addEventListener('click',()=>screen('setup'));
+  $('again').addEventListener('click',()=>{clearTimeout(state.advanceTimer);screen('setup')});
   document.querySelectorAll('#modes button')[0].click();
   document.querySelector('#modes button').click();
   api('getCategories').then(showCategories).catch(error=>{const root=$('categories');root.textContent='範圍暫時無法載入。';showError(error.message)});
