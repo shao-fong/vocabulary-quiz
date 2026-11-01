@@ -1,889 +1,145 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#193b5a">
+  <title>國中英文單字練習</title>
   <style>
-    :root{
-      --primary:#4F7FE7; --primary-dark:#142C49; --bg:#F3E3C6;
-      --card:#ffffff; --correct:#2ecc71; --wrong:#e74c3c; --text:#1c2b3a;
-      --gold:#F9D746; --cream:#F3E3C6;
-    }
-    *{box-sizing:border-box;}
-    body{
-      font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
-      background:linear-gradient(160deg,#fdf6e8,#F3E3C6);
-      margin:0; padding:0; color:var(--text);
-      display:flex; justify-content:center; min-height:100vh;
-    }
-    /* 手機：接近全寬；平板／桌機：置中卡片式版面，變寬 */
-    .app{ width:100%; max-width:480px; min-height:100vh; background:var(--card);
-      box-shadow:0 0 24px rgba(0,0,0,0.08); padding:24px 20px; position:relative; }
-
-    @media (min-width:700px){
-      body{ padding:30px 0; align-items:flex-start; }
-      .app{ max-width:820px; min-height:auto; border-radius:26px; padding:40px 56px 48px; }
-      h1{ font-size:1.9em; }
-      .subtitle{ font-size:1em; margin-bottom:32px; }
-      .mascot{ font-size:4.2em; }
-      .question-card{ padding:46px 30px; }
-      .question-word{ font-size:3em; }
-      .options{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-      .option-btn{ min-height:72px; font-size:1.15em; }
-      button{ font-size:1.1em; padding:16px; }
-      .mode-btn{ padding:24px; }
-      input[type=text]{ font-size:1.15em; padding:16px; }
-      .hud{ font-size:1.1em; }
-      .stat-row b{ font-size:1.6em; }
-      table{ font-size:1em; }
-      th,td{ padding:12px 8px; }
-    }
-
-    h1{ font-size:1.3em; text-align:center; color:var(--primary-dark); margin-bottom:4px;}
-    .subtitle{ text-align:center; color:#888; font-size:0.85em; margin-bottom:24px;}
-    .preview-notice{ text-align:center; color:#6d5521; background:#fff3c4; border:1px solid #ead994;
-      border-radius:10px; padding:9px 12px; margin:0 0 18px; font-size:0.84em; }
-    .screen{ display:none; }
-    .screen.active{ display:block; animation:fadeIn .25s ease; }
-    @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
-
-    .mascot{ text-align:center; font-size:3em; margin-bottom:4px; transition:transform .2s; }
-    .mascot.bounce{ animation:bounce .5s ease; }
-    @keyframes bounce{ 0%{transform:scale(1);} 40%{transform:scale(1.3) rotate(-8deg);} 100%{transform:scale(1);} }
-    .mascot-msg{ text-align:center; color:#777; font-size:0.9em; min-height:1.3em; margin-bottom:12px; }
-
-    input[type=text]{
-      width:100%; padding:12px; font-size:1em; border:2px solid #ddd; border-radius:12px;
-      margin-bottom:14px; outline:none;
-    }
-    input[type=text]:focus{ border-color:var(--primary); }
-    button{
-      width:100%; padding:14px; font-size:1em; border:none; border-radius:12px;
-      background:var(--primary); color:#fff; margin-bottom:10px; cursor:pointer;
-      font-weight:600; transition:transform .1s, background .15s;
-    }
-    button:hover{ background:var(--primary-dark); }
-    button:active{ transform:scale(0.96); }
-    button:disabled{ background:#ccc; cursor:not-allowed; transform:none; }
-    .mode-btn{ text-align:left; padding:18px; background:#e9eefb; color:var(--primary-dark); }
-    .mode-btn:hover{ background:#d8e2f8; }
-    .mode-btn small{ display:block; color:#777; font-weight:400; margin-top:2px;}
-    .hud{ display:flex; justify-content:space-between; align-items:center; font-size:0.95em; color:#555; margin-bottom:10px;}
-    .streak-badge{ background:linear-gradient(90deg,var(--gold),#f0c530); color:var(--primary-dark); padding:3px 10px;
-      border-radius:20px; font-size:0.85em; font-weight:700; display:none; }
-    .streak-badge.show{ display:inline-block; animation:pop .3s ease; }
-    @keyframes pop{ 0%{transform:scale(0.4);} 60%{transform:scale(1.15);} 100%{transform:scale(1);} }
-    .progress-bar{ height:9px; background:#ece0c6; border-radius:5px; margin-bottom:22px; overflow:hidden;}
-    .progress-fill{ height:100%; background:linear-gradient(90deg,var(--primary-dark),var(--primary)); transition:width .25s; }
-    .question-card{ background:#fbf6ea; border-radius:18px; padding:30px 18px; text-align:center; margin-bottom:18px;
-      border:2px solid #f1e6cc; transition:border-color .2s; }
-    .question-word{ font-size:1.9em; font-weight:700; color:var(--primary-dark); word-break:break-word;}
-    .options{ display:flex; flex-direction:column; gap:12px; }
-    .option-btn{ background:#fff; border:2px solid #e6ddc5; color:var(--text); font-weight:500; min-height:56px; }
-    .option-btn:hover{ border-color:var(--primary); background:#e9eefb; }
-    .option-btn.correct{ background:var(--correct); border-color:var(--correct); color:#fff; animation:pop .3s ease;}
-    .option-btn.wrong{ background:var(--wrong); border-color:var(--wrong); color:#fff; animation:shake .3s ease;}
-    @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
-    .result-box{ text-align:center; padding:10px 0 20px; }
-    .score-big{ font-size:2.8em; font-weight:800; color:var(--primary-dark); margin:8px 0;}
-    .stat-row{ display:flex; justify-content:space-around; margin:16px 0; font-size:0.9em; color:#555;}
-    .stat-row b{ display:block; font-size:1.3em; color:var(--text); }
-    table{ width:100%; border-collapse:collapse; margin-top:10px; font-size:0.88em;}
-    th,td{ padding:9px 6px; text-align:center; border-bottom:1px solid #eee;}
-    th{ color:#888; font-weight:600; }
-    tr.me{ background:#fff6d8; font-weight:700; }
-    .rank{ width:30px; color:#aaa; font-weight:700; }
-    .loading{ text-align:center; padding:60px 0; color:#999; font-size:1.1em; }
-    .error{ color:var(--wrong); font-size:0.9em; text-align:center; margin-bottom:10px;}
-    .link-btn{ background:none; color:var(--primary); text-decoration:underline; font-weight:400;}
-    #pronounce-btn:hover{ background:#d8e2f8; }
-    .qcount-btn{ width:auto; min-width:52px; padding:10px 6px; margin:0; background:#e9eefb; color:var(--primary-dark);
-      border:2px solid transparent; font-weight:700; }
-    .qcount-btn:hover:not(.selected){ background:#d8e2f8; }
-    .qcount-btn.selected{ background:var(--primary); color:#fff; }
-    .scope-btn{ text-align:left; padding:18px; background:#e9eefb; color:var(--primary-dark); }
-    .scope-btn:hover:not(.selected){ background:#d8e2f8; }
-    .scope-btn.selected{ background:var(--primary); color:#fff; }
-    .scope-btn small{ display:block; color:inherit; opacity:0.75; font-weight:400; margin-top:2px;}
-    .confetti-piece{ position:fixed; top:-20px; font-size:1.6em; pointer-events:none; z-index:999;
-      animation-name:fall; animation-timing-function:ease-in; }
-    @keyframes fall{ to{ transform:translateY(105vh) rotate(360deg); opacity:0.3; } }
-
-    /* ---- 問題回報 ---- */
-    .report-row{ text-align:center; margin-top:8px; }
-    .report-btn{ width:auto; display:inline-block; padding:10px 16px; margin:0; font-size:0.9em;
-      background:transparent; color:#8a7a55; border:1.5px dashed #d9c9a3; font-weight:600; }
-    .report-btn:hover:not(:disabled){ background:#fbf6ea; color:var(--primary-dark); }
-    .report-btn:disabled{ background:transparent; color:#c9bfa6; border-color:#e8dfc8; }
-    .modal-overlay{ position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(20,44,73,0.55);
-      display:none; align-items:center; justify-content:center; padding:16px; z-index:1000; }
-    .modal-overlay.show{ display:flex; animation:overlayIn .2s ease; }
-    @keyframes overlayIn{ from{opacity:0;} to{opacity:1;} }
-    .modal-card{ background:#fff; width:100%; max-width:460px; border-radius:20px; padding:22px 20px 12px;
-      box-shadow:0 10px 40px rgba(0,0,0,0.3); max-height:92vh; overflow:auto; }
-    .modal-title{ margin:0 0 12px; color:var(--primary-dark); font-size:1.2em; text-align:center; }
-    .report-word{ background:#fbf6ea; border:2px solid #f1e6cc; border-radius:14px; padding:12px;
-      text-align:center; margin-bottom:12px; }
-    .report-word b{ display:block; font-size:1.35em; color:var(--primary-dark); word-break:break-word; }
-    .report-word span{ color:#555; }
-    .report-label{ font-size:0.9em; color:#666; margin:0 0 6px; }
-    .report-types{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
-    .report-type-btn{ text-align:left; background:#e9eefb; color:var(--primary-dark); margin:0;
-      padding:12px 14px; border:2px solid transparent; }
-    .report-type-btn:hover:not(.selected){ background:#d8e2f8; }
-    .report-type-btn.selected{ background:var(--primary); color:#fff; }
-    .report-hint{ text-align:center; font-size:0.82em; color:#999; margin:0 0 10px; }
-    .toast{ position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px);
-      background:var(--primary-dark); color:#fff; padding:12px 20px; border-radius:30px; font-weight:600;
-      opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:1100;
-      max-width:90vw; text-align:center; }
-    .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+    :root{font-family:system-ui,-apple-system,"Noto Sans TC","PingFang TC",sans-serif;color:#18334b;background:#f5f1e7;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:24px 12px;background:linear-gradient(145deg,#faf7ef,#ede3cf)}
+    main{width:min(100%,680px);margin:auto;background:#fff;border-radius:24px;padding:clamp(20px,5vw,42px);box-shadow:0 16px 45px #21384c18}
+    h1{text-align:center;font-size:clamp(1.35rem,4vw,1.9rem);margin:0 0 8px;color:#193b5a}h2{font-size:1.2rem;margin:24px 0 12px}
+    .intro{text-align:center;color:#667784;margin:0 0 24px}.privacy{background:#f1f6fa;border-radius:12px;padding:12px 14px;font-size:.9rem;color:#4a6275;line-height:1.6;margin:18px 0}
+    .screen{display:none}.screen.active{display:block}.field-label{display:block;font-weight:700;margin:18px 0 7px}input,select{font:inherit;width:100%;padding:13px;border:1.5px solid #cbd6df;border-radius:12px;background:white;color:#18334b}input:focus,select:focus{outline:3px solid #7da9e355;border-color:#4f7fe7}
+    button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:13px 16px;background:#4f7fe7;color:white;font-weight:700;transition:filter .15s,transform .1s}button:hover{filter:brightness(.94)}button:active{transform:scale(.99)}button:disabled{opacity:.55;cursor:wait}
+    .primary{width:100%;margin-top:22px}.secondary{background:#eaf0f7;color:#193b5a}.options{display:grid;grid-template-columns:1fr;gap:10px;margin-top:16px}.option{width:100%;min-height:54px;background:#f5f8fb;color:#21384c;border:2px solid #dce5ed;text-align:left}.option:hover{border-color:#4f7fe7;background:#edf3fc}.option.selected{border-color:#4f7fe7;background:#e8f0fd}.option.correct{background:#d9f1e4;border-color:#43a56a;color:#185a32}.option.wrong{background:#fde3e0;border-color:#de6c60;color:#862d27}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid button{text-align:left;background:#f1f5fa;color:#193b5a;border:2px solid transparent}.grid button.selected{border-color:#4f7fe7;background:#e8f0fd}.grid button:disabled{background:#f5f5f5;color:#a0a7ad}
+    .count-row{display:flex;gap:8px;flex-wrap:wrap}.count-row button{flex:1;min-width:55px;padding:11px 6px;background:#eef2f6;color:#193b5a}.count-row button.selected{background:#4f7fe7;color:white}
+    .bar{height:9px;background:#e9edf1;border-radius:9px;overflow:hidden;margin:10px 0 20px}.bar>div{height:100%;background:#4f7fe7;transition:width .2s}.question{padding:26px 16px;text-align:center;background:#fbf8f1;border:1px solid #eee4d1;border-radius:18px}.prompt{font-size:clamp(1.4rem,6vw,2.2rem);font-weight:800;overflow-wrap:anywhere}.hint{font-size:.85rem;color:#778590;margin-top:8px}.hud{display:flex;justify-content:space-between;color:#5e7180;font-size:.92rem}.result-score{text-align:center;font-size:3rem;line-height:1.15;font-weight:850;color:#193b5a;margin:12px}.stats{display:flex;justify-content:space-around;text-align:center;gap:8px;margin:18px 0}.stats strong{display:block;font-size:1.25rem;color:#18334b}.note{color:#778590;font-size:.88rem;line-height:1.55}.error{display:none;background:#fff0ef;color:#a4352b;border-radius:10px;padding:11px 13px;margin-top:14px}.error.show{display:block}.leaderboard-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:360px}th,td{text-align:center;padding:11px 7px;border-bottom:1px solid #edf0f2}th{color:#71818d;font-size:.88rem}tr.mine{background:#fff4ce;font-weight:700}.status{text-align:center;color:#667784;padding:18px}
+    @media(min-width:560px){.options{grid-template-columns:1fr 1fr}.grid{gap:14px}.grid button{padding:17px}}
   </style>
 </head>
 <body>
-<div class="app">
-  <h1>📚 國中英文單字大挑戰</h1>
-  <div class="subtitle">國中範圍 2500 單字</div>
-  <div class="preview-notice" role="status">預覽版：目前僅供檢視畫面；測驗、成績與問題回報尚未接通。</div>
+<main>
+  <h1>📚 國中英文單字練習</h1>
+  <p class="intro">選擇範圍與關卡，開始挑戰自己的單字力</p>
 
-  <!-- 畫面1：輸入座號（自動帶出姓名） -->
-  <div id="screen-name" class="screen active">
-    <div class="mascot">🦉</div>
-    <div class="mascot-msg">嗨！我是單字貓頭鷹，準備好了嗎？</div>
-    <input type="text" id="input-seat" inputmode="numeric" placeholder="請輸入你的座號（例如：12）">
-    <div id="seat-preview" style="min-height:1.4em;text-align:center;font-size:0.9em;margin:-4px 0 12px;"></div>
-    <input type="text" id="input-name-manual" placeholder="請輸入你的姓名" style="display:none;">
-    <button onclick="goScopeSelect()">下一步</button>
-    <button class="link-btn" id="toggle-manual-btn" onclick="toggleManualName()">查無座號？改用姓名輸入</button>
-  </div>
-
-  <!-- 畫面1.5：選範圍 -->
-  <div id="screen-scope" class="screen">
-    <p style="text-align:center;color:#666;">哈囉，<b id="hello-name-scope"></b>！請選擇要背的範圍：</p>
-    <div id="scope-list"></div>
-    <button class="link-btn" onclick="goBackToName()">⬅ 返回座號輸入</button>
-  </div>
-
-  <!-- 畫面2：選關卡＋題數 -->
-  <div id="screen-mode" class="screen">
-    <p style="text-align:center;color:#666;">哈囉，<b id="hello-name"></b>！範圍：<b id="hello-scope"></b></p>
-
-    <div style="margin-bottom:16px;">
-      <div style="text-align:center;color:#666;font-size:0.9em;margin-bottom:8px;">題數：<b id="qcount-label">20</b> 題</div>
-      <div id="qcount-chips" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-        <button type="button" class="qcount-btn" onclick="selectQuestionCount(10)">10</button>
-        <button type="button" class="qcount-btn" onclick="selectQuestionCount(20)">20</button>
-        <button type="button" class="qcount-btn" onclick="selectQuestionCount(30)">30</button>
-        <button type="button" class="qcount-btn" onclick="selectQuestionCount(40)">40</button>
-        <button type="button" class="qcount-btn" onclick="selectQuestionCount(50)">50</button>
-      </div>
+  <section id="setup" class="screen active">
+    <label class="field-label" for="seat">座號</label>
+    <input id="seat" type="number" inputmode="numeric" min="1" max="999" step="1" placeholder="請輸入座號" autocomplete="off">
+    <p class="privacy">不需要輸入姓名。排行榜不顯示姓名或座號；座號不是密碼，系統無法確認輸入者是否本人。若需要防止代填，之後可加入校方登入或個人通行碼。</p>
+    <h2>一、選擇範圍</h2>
+    <div id="categories" class="grid"><div class="status">正在載入範圍…</div></div>
+    <h2>二、選擇關卡</h2>
+    <div id="modes" class="grid">
+      <button data-mode="cn2en_choice">看中文選英文<small><br>四選一</small></button>
+      <button data-mode="en2cn_choice">看英文選中文<small><br>四選一</small></button>
+      <button data-mode="cn2en_spell">看中文拼英文<small><br>自行輸入拼字</small></button>
     </div>
-
-    <button class="mode-btn" onclick="startQuiz('cn2en_choice')">
-      🀄→🔤 關卡一：看中文選英文
-      <small>顯示中文意思，四選一選出正確英文單字</small>
-    </button>
-    <button class="mode-btn" onclick="startQuiz('cn2en_spell')">
-      🀄→⌨️ 關卡二：看中文拼英文
-      <small>顯示中文意思，自己拼出正確英文單字</small>
-    </button>
-    <button class="mode-btn" onclick="startQuiz('en2cn_choice')">
-      🔤→🀄 關卡三：看英文選中文
-      <small>顯示英文單字，四選一選出正確中文意思</small>
-    </button>
-    <button class="link-btn" onclick="showLeaderboardOnly()">先看看排行榜</button>
-    <button class="link-btn" onclick="showScreen('screen-scope')">⬅ 返回範圍選擇</button>
-  </div>
-
-  <!-- 畫面3：載入中 -->
-  <div id="screen-loading" class="screen">
-    <div class="loading">🦉 題目準備中...</div>
-  </div>
-
-  <!-- 畫面4：作答 -->
-  <div id="screen-quiz" class="screen">
-    <div class="hud">
-      <span id="hud-progress">第 1 / 20 題</span>
-      <span id="streak-badge" class="streak-badge">🔥 連對 0</span>
-      <span id="hud-timer">⏱ 00:00</span>
+    <h2>三、選擇題數</h2>
+    <div id="counts" class="count-row">
+      <button data-count="10">10</button><button data-count="20" class="selected">20</button><button data-count="30">30</button><button data-count="40">40</button><button data-count="50">50</button>
     </div>
-    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <button id="start" class="primary">開始測驗</button>
+  </section>
 
-    <div class="question-card" id="question-card">
-      <div id="question-word" class="question-word"></div>
-    </div>
+  <section id="quiz" class="screen">
+    <div class="hud"><span id="progress">第 1 題</span><span id="timer">00:00</span></div>
+    <div class="bar"><div id="barfill" style="width:0"></div></div>
+    <div class="question"><div id="prompt" class="prompt"></div><div id="difficulty" class="hint"></div></div>
+    <div id="answer-area"></div>
+    <button id="next" class="primary" style="display:none">下一題</button>
+  </section>
 
-    <div id="options" class="options"></div>
-
-    <div id="spell-area" style="display:none;">
-      <button type="button" id="pronounce-btn" class="link-btn" style="background:#e9eefb;color:var(--primary-dark);font-weight:700;" onclick="pronounceWord()">🔊 唸單字</button>      <input type="text" id="spell-input" placeholder="請輸入英文單字" autocomplete="off">
-      <div id="spell-feedback" style="min-height:1.4em;text-align:center;font-weight:700;margin:-4px 0 10px;"></div>
-      <button onclick="submitSpell()">送出</button>
-    </div>
-
-    <div class="report-row">
-      <button type="button" id="report-btn" class="report-btn" onclick="openReport()" disabled>🚩 上一題問題回報</button>
-    </div>
-  </div>
-
-  <!-- 畫面5：結果 -->
-  <div id="screen-result" class="screen">
-    <div class="result-box">
-      <div class="mascot" id="result-mascot">🏆</div>
-      <div>總積分</div>
-      <div class="score-big" id="result-score">0</div>
-      <div class="stat-row">
-        <div><b id="result-accuracy">0%</b>答對率</div>
-        <div><b id="result-time">0s</b>用時</div>
-        <div><b id="result-correct">0/20</b>答對題數</div>
-      </div>
-      <div style="font-size:0.85em;color:#999;">
-        (答對率分數 <span id="result-accscore">0</span> + 用時分數 <span id="result-speedscore">0</span>)
-      </div>
-    </div>
-    <button onclick="showScreen('screen-mode')">再玩一次</button>
-    <h3 style="text-align:center;margin-top:24px;">🏆 積分排行榜</h3>
-    <table id="leaderboard-table">
-      <thead><tr><th class="rank">#</th><th>姓名</th><th>範圍</th><th>關卡</th><th>答對率</th><th>積分</th></tr></thead>
-      <tbody id="leaderboard-body"></tbody>
-    </table>
-  </div>
-
-  <div id="error-box" class="error" style="display:none;"></div>
-</div>
-
-<!-- 問題回報視窗 -->
-<div id="report-modal" class="modal-overlay" onclick="if(event.target===this) closeReport()">
-  <div class="modal-card">
-    <h2 class="modal-title">🚩 上一題問題回報</h2>
-
-    <div class="report-word">
-      <b id="report-en"></b>
-      <span id="report-cn"></span>
-    </div>
-
-    <p class="report-label">是哪裡有問題？</p>
-    <div class="report-types">
-      <button type="button" class="report-type-btn selected" data-type="中文翻譯跟課本不同" onclick="selectReportType(this)">📖 中文翻譯跟課本不同</button>
-      <button type="button" class="report-type-btn" data-type="英文單字拼法有誤" onclick="selectReportType(this)">🔤 英文單字拼法有誤</button>
-      <button type="button" class="report-type-btn" data-type="需要字首提示" onclick="selectReportType(this)">🔠 需要字首提示（有好幾個單字都是這個中文）</button>
-      <button type="button" class="report-type-btn" data-type="其他問題" onclick="selectReportType(this)">💬 其他問題</button>
-    </div>
-
-    <div class="report-hint">⏸ 回報的時候計時會暫停，不會影響你的成績</div>
-    <div id="report-msg" style="min-height:1.3em;text-align:center;font-size:0.9em;margin-bottom:8px;"></div>
-
-    <button type="button" id="report-send-btn" onclick="sendReport()">送出回報</button>
-    <button type="button" id="report-cancel-btn" class="link-btn" onclick="closeReport()">取消</button>
-  </div>
-</div>
-
-<div id="toast" class="toast"></div>
-
+  <section id="result" class="screen">
+    <div class="status">測驗完成</div>
+    <div id="score" class="result-score">0</div>
+    <div class="stats"><div><strong id="accuracy">0%</strong>答對率</div><div><strong id="correct">0/0</strong>答對題數</div><div><strong id="time">0 秒</strong>作答時間</div></div>
+    <p id="score-detail" class="note" style="text-align:center"></p>
+    <p id="rank-note" class="note" style="text-align:center"></p>
+    <h2 id="leader-title">🏆 排行榜</h2>
+    <p class="note">排行榜依所選範圍和關卡分開計算，只顯示名次與成績。</p>
+    <div class="leaderboard-wrap"><table><thead><tr><th>名次</th><th>積分</th><th>答對率</th><th>答對題數</th><th>秒數</th></tr></thead><tbody id="leaderboard"></tbody></table></div>
+    <button id="again" class="primary">回到測驗設定</button>
+  </section>
+  <div id="error" class="error" role="alert"></div>
+</main>
 <script src="config.js"></script>
 <script>
-  let studentName = '';
-  let currentMode = '';
-  let questions = [];
-  let currentIndex = 0;
-  let correctCount = 0;
-  let currentStreak = 0;
-  let startTime = 0;
-  let timerInterval = null;
-  let seatLookupResult = null; // { found, name }
-  let useManualName = false;
-  let seatDebounceTimer = null;
-  let selectedCategory = '';
-  let selectedQuestionCount = 20;
-
-  // 問題回報用
-  let lastAnswered = null;     // 最近一次作答的題目（回報的就是它）
-  let pausedMs = 0;            // 回報視窗開著的時間，不算進用時
-  let reportPauseStart = 0;    // 目前這次暫停從什麼時候開始（0 = 沒有在暫停）
-  let reportType = '中文翻譯跟課本不同';
-  let reportedKeys = {};       // 已經回報過的題目，避免同一個人重複回報
-  let reportSending = false;
-  let toastTimer = null;
-
-  const PRAISE = ['太棒了！🎉','答對了！','神準！👏','厲害厲害！','完全正確！'];
-  const ENCOURAGE = ['沒關係，繼續加油！','下一題一定行！','再試試看！','別氣餒～'];
-
   const API_URL = window.APP_CONFIG && window.APP_CONFIG.apiUrl;
-
-  function apiCall(action, payload){
-    if (!API_URL){
-      return Promise.reject(new Error('網站 API 尚未設定，請稍後再試。'));
-    }
-    return fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: action, payload: payload || {} })
-    }).then(function(response){
-      return response.json().catch(function(){ return {}; }).then(function(data){
-        if (!response.ok) throw new Error(data.error || '伺服器暫時無法處理，請稍後再試。');
-        return data;
-      });
-    }).catch(function(err){
-      if (err instanceof TypeError) throw new Error('目前無法連線，請檢查網路或稍後再試。');
-      throw err;
+  const MODES = {cn2en_choice:'看中文選英文',en2cn_choice:'看英文選中文',cn2en_spell:'看中文拼英文'};
+  const state = {seatNo:'',category:'',mode:'',count:20,quizId:'',questions:[],answers:[],index:0,startedAt:0,timer:null,locked:false,submitting:false};
+  const $ = id => document.getElementById(id);
+  function showError(message){const box=$('error');box.textContent=message;box.classList.add('show');setTimeout(()=>box.classList.remove('show'),6000)}
+  function screen(id){document.querySelectorAll('.screen').forEach(node=>node.classList.remove('active'));$(id).classList.add('active');$('error').classList.remove('show')}
+  async function api(action,payload={}){
+    if(!API_URL) throw new Error('測驗服務尚未設定，請稍後再試。');
+    let response;
+    try{response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,payload})})}
+    catch(_){throw new Error('目前無法連線，請檢查網路或稍後再試。')}
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.error) throw new Error(data.error||'服務暫時無法處理，請稍後再試。');
+    return data;
+  }
+  function showCategories(items){
+    const root=$('categories');root.replaceChildren();
+    const order=['2500','國一單字','國二單字','國三單字'];
+    order.forEach(name=>{
+      const item=items.find(x=>x.name===name);if(!item)return;
+      const button=document.createElement('button');button.textContent=`${name}｜${item.count} 個單字`;
+      button.disabled=item.count<4;button.dataset.category=name;
+      button.addEventListener('click',()=>{state.category=name;root.querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b===button))});root.append(button);
     });
+    const first=root.querySelector('button:not(:disabled)');if(first)first.click();
   }
-
-  function showScreen(id){
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  }
-
-  function showError(msg){
-    const box = document.getElementById('error-box');
-    box.style.display = 'block';
-    box.textContent = msg;
-    setTimeout(() => box.style.display = 'none', 4000);
-  }
-
-  // ---- 簡單音效（不用外部檔案，用 Web Audio 產生嗶聲）----
-  // iPad / iOS Safari 預設會把 AudioContext 卡在 "suspended" 狀態，
-  // 一定要在使用者的第一次點擊/觸控時建立並 resume()，之後才能正常發出聲音。
-  let audioCtx;
-  // 語音朗讀：預先載入語音清單，並挑選聽起來比較自然的英文語音
-  // （瀏覽器預設語音常常是最舊、最生硬的那一個，例如 iOS 的 "Fred"）
-  let cachedVoices = [];
-  function loadVoicesOnce(){
-    if (!('speechSynthesis' in window)) return;
-    cachedVoices = speechSynthesis.getVoices();
-    if (!cachedVoices.length){
-      speechSynthesis.onvoiceschanged = function(){ cachedVoices = speechSynthesis.getVoices(); };
-    }
-  }
-  loadVoicesOnce();
-
-  function pickBestEnglishVoice(){
-    const voices = (cachedVoices && cachedVoices.length) ? cachedVoices : speechSynthesis.getVoices();
-    if (!voices || !voices.length) return null;
-    // 依序嘗試常見「聽起來比較自然」的英文語音名稱
-    const preferredNames = ['Google US English','Samantha','Karen','Moira','Tessa','Daniel','Alex','Siri'];
-    for (let i = 0; i < preferredNames.length; i++){
-      const found = voices.find(function(v){ return v.name.indexOf(preferredNames[i]) !== -1 && v.lang.indexOf('en') === 0; });
-      if (found) return found;
-    }
-    const enUS = voices.find(function(v){ return v.lang === 'en-US'; });
-    if (enUS) return enUS;
-    return voices.find(function(v){ return v.lang && v.lang.indexOf('en') === 0; }) || null;
-  }
-
-  function speakWord_(text){
-    const utter = new SpeechSynthesisUtterance(text);
-    const voice = pickBestEnglishVoice();
-    if (voice) { utter.voice = voice; utter.lang = voice.lang; }
-    else { utter.lang = 'en-US'; }
-    utter.rate = 0.95;
-    utter.pitch = 1;
-    utter.volume = 1;
-    speechSynthesis.speak(utter);
-  }
-
-  function pronounceWord(){
+  document.querySelectorAll('#modes button').forEach(button=>button.addEventListener('click',()=>{state.mode=button.dataset.mode;document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('selected',b===button))}));
+  $('counts').addEventListener('click',event=>{const button=event.target.closest('button[data-count]');if(!button)return;state.count=Number(button.dataset.count);$('counts').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b===button))});
+  $('start').addEventListener('click',async()=>{
+    const seat=String($('seat').value).trim();
+    if(!/^\d{1,3}$/.test(seat)||Number(seat)<1){showError('請輸入有效座號（1 至 999）。');return}
+    if(!state.category){showError('請先選擇有單字的範圍。');return}
+    if(!state.mode){showError('請先選擇測驗關卡。');return}
+    state.seatNo=seat;state.locked=true;$('start').disabled=true;$('start').textContent='題目載入中…';
     try{
-      if (!('speechSynthesis' in window)) { showError('此裝置不支援語音朗讀'); return; }
-      const q = questions[currentIndex];
-      if (!q) return;
-      // 手機瀏覽器常把語音引擎卡在暫停狀態，播放前先確保是喚醒的
-      if (speechSynthesis.paused) speechSynthesis.resume();
-      speechSynthesis.cancel(); // 避免疊加播放
-      // 手機上語音清單常常要晚一點才載入完成，載入中就先重試一次
-      if (!cachedVoices.length) {
-        cachedVoices = speechSynthesis.getVoices();
-        if (!cachedVoices.length) {
-          setTimeout(function(){ speakWord_(q.en); }, 150);
-          return;
-        }
-      }
-      speakWord_(q.en);
-    }catch(e){ /* 裝置不支援就略過 */ }
-  }
-
-  function unlockAudio(){
-    try{
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      // 播放一個極短、幾乎無聲的緩衝區，徹底解鎖 iOS 的音訊輸出
-      const buffer = audioCtx.createBuffer(1, 1, 22050);
-      const src = audioCtx.createBufferSource();
-      src.buffer = buffer;
-      src.connect(audioCtx.destination);
-      src.start(0);
-    }catch(e){ /* 忽略不支援的瀏覽器 */ }
-    // 同時「暖機」語音合成引擎：很多手機瀏覽器一定要在使用者第一次點擊時
-    // 呼叫過一次 speak()，之後程式才叫得動語音朗讀功能
-    try{
-      if ('speechSynthesis' in window){
-        const warmup = new SpeechSynthesisUtterance(' ');
-        warmup.volume = 0;
-        speechSynthesis.speak(warmup);
-      }
-    }catch(e){ /* 忽略不支援的瀏覽器 */ }
-  }
-  document.addEventListener('touchstart', unlockAudio, { once:true });
-  document.addEventListener('mousedown', unlockAudio, { once:true });
-
-  function beep(freq, duration, type){
-    try{
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type || 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.start(); osc.stop(audioCtx.currentTime + duration);
-    }catch(e){ /* 若瀏覽器不支援就靜音略過 */ }
-  }
-  function playCorrectSound(){ beep(880,0.12,'sine'); setTimeout(()=>beep(1180,0.15,'sine'),100); }
-  function playWrongSound(){ beep(180,0.25,'sawtooth'); }
-  function playFinishSound(){
-    // 完成作答的小段上升音階，像過關音效
-    const notes = [523,659,784,1047]; // C5-E5-G5-C6
-    notes.forEach(function(freq, i){
-      setTimeout(()=>beep(freq, 0.18, 'triangle'), i*130);
-    });
-  }
-
-  function bounceMascot(el){
-    el.classList.remove('bounce'); void el.offsetWidth; el.classList.add('bounce');
-  }
-
-  function confettiBurst(){
-    const emojis = ['🎉','✨','🎊','⭐','🥳'];
-    for (let i=0;i<24;i++){
-      const span = document.createElement('span');
-      span.className = 'confetti-piece';
-      span.textContent = emojis[Math.floor(Math.random()*emojis.length)];
-      span.style.left = Math.random()*100 + 'vw';
-      span.style.animationDuration = (1.6 + Math.random()*1.2) + 's';
-      span.style.fontSize = (1 + Math.random()*1.2) + 'em';
-      document.body.appendChild(span);
-      setTimeout(()=>span.remove(), 3000);
-    }
-  }
-
-  function goScopeSelect(){
-    if (useManualName){
-      const manualInput = document.getElementById('input-name-manual');
-      if (!manualInput.value.trim()) { showError('請輸入姓名'); return; }
-      studentName = manualInput.value.trim();
-    } else {
-      const seatVal = document.getElementById('input-seat').value.trim();
-      if (!seatVal) { showError('請輸入座號'); return; }
-      if (!seatLookupResult || !seatLookupResult.found || seatLookupResult.seat !== seatVal) {
-        showError('座號查詢中或查無此座號，請稍候或改用姓名輸入');
-        return;
-      }
-      studentName = seatLookupResult.name;
-    }
-    document.getElementById('hello-name-scope').textContent = studentName;
-    showScreen('screen-loading');
-    apiCall('getCategories')
-      .then(renderScopeList)
-      .catch(function(err){ showError('範圍載入失敗：' + err.message); showScreen('screen-name'); });
-  }
-
-  function renderScopeList(categories){
-    const list = document.getElementById('scope-list');
-    list.innerHTML = '';
-    if (!categories || categories.length === 0){
-      showError('words 工作表沒有任何單字資料');
-      showScreen('screen-name');
-      return;
-    }
-    categories.forEach(function(cat){
-      const btn = document.createElement('button');
-      btn.className = 'scope-btn';
-      btn.innerHTML = cat.name + '<small>共 ' + cat.count + ' 個單字</small>';
-      btn.onclick = function(){ selectCategory(cat.name, btn); };
-      list.appendChild(btn);
-    });
-    // 預設選第一個範圍
-    selectedCategory = categories[0].name;
-    list.firstChild.classList.add('selected');
-    showScreen('screen-scope');
-  }
-
-  function selectCategory(name, btnEl){
-    selectedCategory = name;
-    document.querySelectorAll('.scope-btn').forEach(b => b.classList.remove('selected'));
-    btnEl.classList.add('selected');
-    document.getElementById('hello-name').textContent = studentName;
-    document.getElementById('hello-scope').textContent = selectedCategory;
-    showScreen('screen-mode');
-  }
-
-  function selectQuestionCount(n){
-    selectedQuestionCount = n;
-    document.getElementById('qcount-label').textContent = n;
-    document.querySelectorAll('.qcount-btn').forEach(function(b){
-      b.classList.toggle('selected', parseInt(b.textContent,10) === n);
-    });
-  }
-
-  function goBackToName(){
-    showScreen('screen-name');
-  }
-
-  function toggleManualName(){
-    useManualName = !useManualName;
-    document.getElementById('input-seat').style.display = useManualName ? 'none' : 'block';
-    document.getElementById('seat-preview').style.display = useManualName ? 'none' : 'block';
-    document.getElementById('input-name-manual').style.display = useManualName ? 'block' : 'none';
-    document.getElementById('toggle-manual-btn').textContent = useManualName ? '改用座號輸入' : '查無座號？改用姓名輸入';
-  }
-
-  document.getElementById('input-seat').addEventListener('input', function(){
-    const seatVal = this.value.trim();
-    const preview = document.getElementById('seat-preview');
-    clearTimeout(seatDebounceTimer);
-    seatLookupResult = null;
-    if (!seatVal) { preview.textContent = ''; return; }
-    preview.style.color = '#999';
-    preview.textContent = '查詢中...';
-    seatDebounceTimer = setTimeout(function(){
-      apiCall('lookupStudentBySeat', { seatNo: seatVal })
-        .then(function(res){
-          res.seat = seatVal;
-          seatLookupResult = res;
-          if (res.found){
-            preview.style.color = 'var(--correct)';
-            preview.textContent = '👋 ' + res.name + '，就是你吧？';
-          } else {
-            preview.style.color = 'var(--wrong)';
-            preview.textContent = '查無此座號，請確認，或改用姓名輸入';
-          }
-        })
-        .catch(function(err){
-          preview.style.color = 'var(--wrong)';
-          preview.textContent = '查詢失敗：' + err.message;
-        });
-    }, 400);
+      const result=await api('getQuizQuestions',{seatNo:seat,category:state.category,mode:state.mode,questionCount:state.count});
+      state.quizId=result.quizId;state.questions=result.questions;state.answers=[];state.index=0;state.locked=false;screen('quiz');state.startedAt=Date.now();renderQuestion();
+      clearInterval(state.timer);state.timer=setInterval(updateTimer,500);updateTimer();
+    }catch(error){showError(error.message);state.locked=false}
+    finally{$('start').disabled=false;$('start').textContent='開始測驗'}
   });
-
-  function startQuiz(mode){
-    currentMode = mode;
-    showScreen('screen-loading');
-    apiCall('getQuizQuestions', {
-      mode: mode,
-      category: selectedCategory,
-      questionCount: selectedQuestionCount
-    }).then(onQuestionsLoaded)
-      .catch(function(err){ showError('題目載入失敗：' + err.message); showScreen('screen-mode'); });
-  }
-
-  function onQuestionsLoaded(qs){
-    questions = qs;
-    currentIndex = 0;
-    correctCount = 0;
-    currentStreak = 0;
-    startTime = Date.now();
-    pausedMs = 0;
-    reportPauseStart = 0;
-    lastAnswered = null;
-    document.getElementById('report-btn').disabled = true; // 要先答過一題才有「上一題」可以回報
-    showScreen('screen-quiz');
-    startTimer();
-    renderQuestion();
-  }
-
-  function startTimer(){
-    updateTimerDisplay();
-    timerInterval = setInterval(updateTimerDisplay, 500);
-  }
-  function stopTimer(){ clearInterval(timerInterval); }
-  function elapsedSeconds(){
-    const now = Date.now();
-    const ongoingPause = reportPauseStart ? (now - reportPauseStart) : 0; // 回報視窗還開著的這段也要扣掉
-    return (now - startTime - pausedMs - ongoingPause) / 1000;
-  }
-  function updateTimerDisplay(){
-    const sec = Math.floor(elapsedSeconds());
-    const mm = String(Math.floor(sec/60)).padStart(2,'0');
-    const ss = String(sec%60).padStart(2,'0');
-    document.getElementById('hud-timer').textContent = '⏱ ' + mm + ':' + ss;
-  }
-
-  function updateStreakBadge(){
-    const badge = document.getElementById('streak-badge');
-    if (currentStreak >= 3){
-      badge.textContent = '🔥 連對 ' + currentStreak;
-      badge.classList.add('show');
-    } else {
-      badge.classList.remove('show');
-    }
-  }
-
+  function updateTimer(){const seconds=Math.floor((Date.now()-state.startedAt)/1000);$('timer').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`}
   function renderQuestion(){
-    if ('speechSynthesis' in window) speechSynthesis.cancel(); // 換題時停止上一題可能還在播的語音
-    const total = questions.length;
-    document.getElementById('hud-progress').textContent = '第 ' + (currentIndex+1) + ' / ' + total + ' 題';
-    document.getElementById('progress-fill').style.width = (currentIndex/total*100) + '%';
-    document.getElementById('question-card').style.borderColor = '#f1e6cc';
-
-    const q = questions[currentIndex];
-    const optionsDiv = document.getElementById('options');
-    const spellArea = document.getElementById('spell-area');
-    optionsDiv.innerHTML = '';
-
-    if (currentMode === 'cn2en_spell'){
-      document.getElementById('question-word').textContent = q.cn;
-      spellArea.style.display = 'block';
-      optionsDiv.style.display = 'none';
-      const input = document.getElementById('spell-input');
-      input.value = '';
-      input.disabled = false;
-      input.placeholder = '請輸入英文單字';
-      input.style.borderColor = '#ddd';
-      document.getElementById('spell-feedback').textContent = '';
-      input.focus();
-      input.onkeydown = function(e){ if (e.key === 'Enter') submitSpell(); };
-    } else {
-      spellArea.style.display = 'none';
-      optionsDiv.style.display = 'flex';
-      document.getElementById('question-word').textContent = (currentMode === 'cn2en_choice') ? q.cn : q.en;
-      q.options.forEach(function(opt){
-        const btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.textContent = opt;
-        btn.onclick = function(){ handleChoice(btn, opt, q.answer); };
-        optionsDiv.appendChild(btn);
-      });
+    const q=state.questions[state.index];$('progress').textContent=`第 ${state.index+1} / ${state.questions.length} 題`;$('barfill').style.width=`${state.index/state.questions.length*100}%`;
+    $('prompt').textContent=q.prompt;$('difficulty').textContent=`單字難度：${q.difficulty}`;
+    const area=$('answer-area');area.replaceChildren();$('next').style.display='none';state.locked=false;
+    if(state.mode==='cn2en_spell'){
+      const input=document.createElement('input');input.autocomplete='off';input.autocapitalize='none';input.spellcheck=false;input.placeholder='輸入英文單字';input.setAttribute('aria-label','輸入英文單字');
+      const submit=document.createElement('button');submit.className='primary';submit.textContent='送出答案';submit.addEventListener('click',()=>saveAnswer(input.value));input.addEventListener('keydown',event=>{if(event.key==='Enter')saveAnswer(input.value)});area.append(input,submit);input.focus();
+    }else{
+      const options=document.createElement('div');options.className='options';q.options.forEach(option=>{const button=document.createElement('button');button.className='option';button.textContent=option;button.addEventListener('click',()=>saveAnswer(option,button));options.append(button)});area.append(options);
     }
   }
-
-  function handleChoice(btn, chosen, answer){
-    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
-    const isCorrect = chosen === answer;
-    rememberAnswer_(questions[currentIndex], chosen, isCorrect);
-    const card = document.getElementById('question-card');
-    if (isCorrect){
-      btn.classList.add('correct');
-      correctCount++;
-      currentStreak++;
-      card.style.borderColor = 'var(--correct)';
-      playCorrectSound();
-    } else {
-      btn.classList.add('wrong');
-      currentStreak = 0;
-      card.style.borderColor = 'var(--wrong)';
-      playWrongSound();
-      document.querySelectorAll('.option-btn').forEach(b => {
-        if (b.textContent === answer) b.classList.add('correct');
-      });
-    }
-    updateStreakBadge();
-    setTimeout(nextQuestion, 650);
+  function saveAnswer(answer,chosenButton){if(state.locked)return;state.locked=true;state.answers[state.index]=String(answer).trim();$('answer-area').querySelectorAll('button,input').forEach(el=>el.disabled=true);if(chosenButton)chosenButton.classList.add('selected');$('next').style.display='block';$('next').textContent=state.index===state.questions.length-1?'完成測驗':'下一題'}
+  $('next').addEventListener('click',async()=>{if(state.index<state.questions.length-1){state.index++;renderQuestion();return}await finishQuiz()});
+  async function finishQuiz(){if(state.locked===false||state.submitting)return;state.submitting=true;state.locked=true;clearInterval(state.timer);$('next').disabled=true;$('next').textContent='正在批改…';
+    try{const result=await api('submitScore',{quizId:state.quizId,seatNo:state.seatNo,answers:state.answers});renderResult(result)}
+    catch(error){showError(error.message);state.submitting=false;$('next').disabled=false;$('next').textContent='重試送出成績'}
   }
-
-  function submitSpell(){
-    const input = document.getElementById('spell-input');
-    if (input.disabled) return;
-    input.disabled = true;
-    const q = questions[currentIndex];
-    const isCorrect = input.value.trim().toLowerCase() === q.en.toLowerCase();
-    rememberAnswer_(q, input.value.trim(), isCorrect);
-    const card = document.getElementById('question-card');
-    const feedback = document.getElementById('spell-feedback');
-    let delay = 750;
-    if (isCorrect){
-      correctCount++;
-      currentStreak++;
-      input.style.borderColor = 'var(--correct)';
-      card.style.borderColor = 'var(--correct)';
-      feedback.style.color = 'var(--correct)';
-      feedback.textContent = '✅ 拼對了！';
-      playCorrectSound();
-    } else {
-      currentStreak = 0;
-      input.style.borderColor = 'var(--wrong)';
-      card.style.borderColor = 'var(--wrong)';
-      feedback.style.color = 'var(--wrong)';
-      feedback.textContent = '❌ 正確拼法：' + q.en;
-      playWrongSound();
-      delay = 1600; // 答錯多給一點時間看正確拼法
-    }
-    updateStreakBadge();
-    setTimeout(nextQuestion, delay);
+  function renderResult(result){
+    $('score').textContent=result.score;$('accuracy').textContent=`${result.accuracyPct}%`;$('correct').textContent=`${result.correct}/${result.total}`;$('time').textContent=`${result.timeSec} 秒`;
+    $('score-detail').textContent=`答對率分 ${result.accuracyScore} + 作答速度分 ${result.speedScore}；單字難度倍率 ${result.wordDifficultyMultiplier} × 關卡倍率 ${result.modeMultiplier}`;
+    $('rank-note').textContent='此榜單每個座號只列個人最佳成績，公開頁面不顯示姓名或座號。';
+    $('leader-title').textContent=`🏆 ${state.category}｜${MODES[state.mode]} 排行榜`;
+    const body=$('leaderboard');body.replaceChildren();
+    if(!result.leaderboard||!result.leaderboard.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.textContent='目前還沒有排行榜紀錄';tr.append(td);body.append(tr)}
+    else result.leaderboard.forEach(row=>{const tr=document.createElement('tr');if(row.isMe)tr.className='mine';[row.rank,row.score,`${row.accuracyPct}%`,`${row.correct}/${row.total}`,row.timeSec].forEach(value=>{const td=document.createElement('td');td.textContent=String(value);tr.append(td)});body.append(tr)});
+    screen('result');$('next').disabled=false;$('next').onclick=null;
   }
-
-  function nextQuestion(){
-    currentIndex++;
-    if (currentIndex >= questions.length){
-      finishQuiz();
-    } else {
-      renderQuestion();
-    }
-  }
-
-  function finishQuiz(){
-    stopTimer();
-    playFinishSound();
-    const timeSec = Math.round(elapsedSeconds());
-    showScreen('screen-loading');
-    apiCall('submitScore', {
-        name: studentName,
-        mode: currentMode,
-        category: selectedCategory,
-        correct: correctCount,
-        total: questions.length,
-        timeSec: timeSec
-      }).then(function(res){ showResult(res, timeSec); })
-      .catch(function(err){ showError('成績送出失敗：' + err.message); });
-  }
-
-  function showResult(res, timeSec){
-    document.getElementById('result-score').textContent = res.score;
-    document.getElementById('result-accuracy').textContent = res.accuracyPct + '%';
-    document.getElementById('result-time').textContent = timeSec + 's';
-    document.getElementById('result-correct').textContent = correctCount + '/' + questions.length;
-    document.getElementById('result-accscore').textContent = res.accuracyScore;
-    document.getElementById('result-speedscore').textContent = res.speedScore;
-
-    const mascot = document.getElementById('result-mascot');
-    const acc = parseFloat(res.accuracyPct);
-    mascot.textContent = acc >= 90 ? '🏆' : acc >= 70 ? '🎉' : acc >= 50 ? '🙂' : '💪';
-    bounceMascot(mascot);
-    if (acc >= 80) confettiBurst();
-
-    renderLeaderboard(res.leaderboard);
-    showScreen('screen-result');
-  }
-
-  function showLeaderboardOnly(){
-    showScreen('screen-loading');
-    apiCall('getLeaderboard', { topN: 10 })
-      .then(function(lb){
-        document.getElementById('result-score').textContent = '-';
-        document.getElementById('result-accuracy').textContent = '-';
-        document.getElementById('result-time').textContent = '-';
-        document.getElementById('result-correct').textContent = '-';
-        document.getElementById('result-accscore').textContent = '-';
-        document.getElementById('result-speedscore').textContent = '-';
-        document.getElementById('result-mascot').textContent = '🏆';
-        renderLeaderboard(lb);
-        showScreen('screen-result');
-      }).catch(function(err){ showError(err.message); showScreen('screen-mode'); });
-  }
-
-  function renderLeaderboard(list){
-    const body = document.getElementById('leaderboard-body');
-    body.innerHTML = '';
-    if (!list || list.length === 0){
-      body.innerHTML = '<tr><td colspan="6" style="color:#999;">目前還沒有紀錄</td></tr>';
-      return;
-    }
-    const medals = ['🥇','🥈','🥉'];
-    list.forEach(function(row, i){
-      const tr = document.createElement('tr');
-      if (row.name === studentName) tr.className = 'me';
-      const rankLabel = medals[i] || (i+1);
-      [rankLabel, row.name, row.category || '', row.mode, row.accuracy, row.score].forEach(function(value, column){
-        const cell = document.createElement('td');
-        if (column === 0) cell.className = 'rank';
-        cell.textContent = String(value == null ? '' : value);
-        tr.appendChild(cell);
-      });
-      body.appendChild(tr);
-    });
-  }
-
-  // ---- 問題回報 ----
-  function rememberAnswer_(q, userAnswer, isCorrect){
-    lastAnswered = {
-      en: q.en, cn: q.cn, ref: q.ref || '',
-      category: selectedCategory, mode: currentMode,
-      userAnswer: userAnswer, isCorrect: isCorrect
-    };
-    document.getElementById('report-btn').disabled = false;
-  }
-
-  function showToast(msg){
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2600);
-  }
-
-  function selectReportType(btn){
-    document.querySelectorAll('.report-type-btn').forEach(function(b){ b.classList.remove('selected'); });
-    btn.classList.add('selected');
-    reportType = btn.getAttribute('data-type');
-  }
-
-  function openReport(){
-    if (!lastAnswered) return;
-    document.getElementById('report-en').textContent = lastAnswered.en;
-    document.getElementById('report-cn').textContent = lastAnswered.cn;
-    document.getElementById('report-msg').textContent = '';
-    selectReportType(document.querySelector('.report-type-btn'));
-    if (!reportPauseStart) reportPauseStart = Date.now(); // 開始暫停計時
-    document.getElementById('report-modal').classList.add('show');
-  }
-
-  function closeReport(){
-    if (reportSending) return;
-    if (reportPauseStart){
-      pausedMs += Date.now() - reportPauseStart; // 結束暫停，把這段時間記起來
-      reportPauseStart = 0;
-    }
-    document.getElementById('report-modal').classList.remove('show');
-    // 拼字關卡：關掉視窗後游標回到輸入框，可以繼續打字
-    if (currentMode === 'cn2en_spell' && document.getElementById('screen-quiz').classList.contains('active')){
-      const input = document.getElementById('spell-input');
-      if (!input.disabled) input.focus();
-    }
-  }
-
-  function setReportBusy_(busy){
-    reportSending = busy;
-    const sendBtn = document.getElementById('report-send-btn');
-    sendBtn.disabled = busy;
-    sendBtn.textContent = busy ? '送出中...' : '送出回報';
-    document.getElementById('report-cancel-btn').disabled = busy;
-  }
-
-  function sendReport(){
-    if (reportSending || !lastAnswered) return;
-    const target = lastAnswered;
-    const key = studentName + '|' + target.category + '|' + target.en;
-    const msg = document.getElementById('report-msg');
-    if (reportedKeys[key]){
-      msg.style.color = 'var(--wrong)';
-      msg.textContent = '這題你已經回報過囉，謝謝！';
-      return;
-    }
-    setReportBusy_(true);
-    apiCall('submitReport', {
-        name: studentName,
-        category: target.category,
-        mode: target.mode,
-        en: target.en,
-        cn: target.cn,
-        ref: target.ref,
-        userAnswer: target.userAnswer,
-        type: reportType
-      }).then(function(){
-        reportedKeys[key] = true;
-        setReportBusy_(false);
-        closeReport();
-        showToast('✅ 已回報，謝謝你！老師會檢查');
-      }).catch(function(err){
-        setReportBusy_(false);
-        msg.style.color = 'var(--wrong)';
-        msg.textContent = '送出失敗：' + (err && err.message ? err.message : '請再試一次');
-      });
-  }
-
-  // 預設選 20 題
-  selectQuestionCount(20);
+  $('again').addEventListener('click',()=>screen('setup'));
+  document.querySelectorAll('#modes button')[0].click();
+  document.querySelector('#modes button').click();
+  api('getCategories').then(showCategories).catch(error=>{const root=$('categories');root.textContent='範圍暫時無法載入。';showError(error.message)});
 </script>
 </body>
 </html>
