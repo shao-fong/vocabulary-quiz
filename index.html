@@ -67,7 +67,7 @@
 </main>
 <script src="config.js"></script>
 <script>
-  const API_URL = window.APP_CONFIG && window.APP_CONFIG.apiUrl;
+  const API_URL = (window.APP_CONFIG && window.APP_CONFIG.apiUrl) || 'https://vocabulary-app-api.yahoo-com-tw-860722.workers.dev/api';
   const MODES = {cn2en_choice:'看中文選英文',en2cn_choice:'看英文選中文',cn2en_spell:'看中文拼英文'};
   const state = {seatNo:'',category:'',mode:'',count:20,quizId:'',questions:[],answers:[],index:0,startedAt:0,timer:null,locked:false,submitting:false};
   const $ = id => document.getElementById(id);
