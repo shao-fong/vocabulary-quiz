@@ -10,7 +10,7 @@
     *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:24px 12px;background:linear-gradient(145deg,#faf7ef,#ede3cf)}
     main{width:min(100%,680px);margin:auto;background:#fff;border-radius:24px;padding:clamp(20px,5vw,42px);box-shadow:0 16px 45px #21384c18}
     h1{text-align:center;font-size:clamp(1.35rem,4vw,1.9rem);margin:0 0 8px;color:#193b5a}h2{font-size:1.2rem;margin:24px 0 12px}
-    .intro{text-align:center;color:#667784;margin:0 0 24px}.privacy{background:#f1f6fa;border-radius:12px;padding:12px 14px;font-size:.9rem;color:#4a6275;line-height:1.6;margin:18px 0}
+    .intro{text-align:center;color:#667784;margin:0 0 24px}
     .screen{display:none}.screen.active{display:block}.field-label{display:block;font-weight:700;margin:18px 0 7px}input,select{font:inherit;width:100%;padding:13px;border:1.5px solid #cbd6df;border-radius:12px;background:white;color:#18334b}input:focus,select:focus{outline:3px solid #7da9e355;border-color:#4f7fe7}
     button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:13px 16px;background:#4f7fe7;color:white;font-weight:700;transition:filter .15s,transform .1s}button:hover{filter:brightness(.94)}button:active{transform:scale(.99)}button:disabled{opacity:.55;cursor:wait}
     .primary{width:100%;margin-top:22px}.secondary{background:#eaf0f7;color:#193b5a}.options{display:grid;grid-template-columns:1fr;gap:10px;margin-top:16px}.option{width:100%;min-height:54px;background:#f5f8fb;color:#21384c;border:2px solid #dce5ed;text-align:left}.option:hover{border-color:#4f7fe7;background:#edf3fc}.option.selected{border-color:#4f7fe7;background:#e8f0fd}.option.correct{background:#d9f1e4;border-color:#43a56a;color:#185a32}.option.wrong{background:#fde3e0;border-color:#de6c60;color:#862d27}
@@ -28,7 +28,6 @@
   <section id="setup" class="screen active">
     <label class="field-label" for="seat">座號</label>
     <input id="seat" type="number" inputmode="numeric" min="1" max="999" step="1" placeholder="請輸入座號" autocomplete="off">
-    <p class="privacy">不需要輸入姓名。排行榜不顯示姓名或座號；座號不是密碼，系統無法確認輸入者是否本人。若需要防止代填，之後可加入校方登入或個人通行碼。</p>
     <h2>一、選擇範圍</h2>
     <div id="categories" class="grid"><div class="status">正在載入範圍…</div></div>
     <h2>二、選擇關卡</h2>
@@ -56,7 +55,6 @@
     <div class="status">測驗完成</div>
     <div id="score" class="result-score">0</div>
     <div class="stats"><div><strong id="accuracy">0%</strong>答對率</div><div><strong id="correct">0/0</strong>答對題數</div><div><strong id="time">0 秒</strong>作答時間</div></div>
-    <p id="score-detail" class="note" style="text-align:center"></p>
     <p id="rank-note" class="note" style="text-align:center"></p>
     <h2 id="leader-title">🏆 排行榜</h2>
     <p class="note">排行榜依所選範圍和關卡分開計算，只顯示名次與成績。</p>
@@ -128,7 +126,6 @@
   }
   function renderResult(result){
     $('score').textContent=result.score;$('accuracy').textContent=`${result.accuracyPct}%`;$('correct').textContent=`${result.correct}/${result.total}`;$('time').textContent=`${result.timeSec} 秒`;
-    $('score-detail').textContent=`答對率分 ${result.accuracyScore} + 作答速度分 ${result.speedScore}；單字難度倍率 ${result.wordDifficultyMultiplier} × 關卡倍率 ${result.modeMultiplier}`;
     $('rank-note').textContent='此榜單每個座號只列個人最佳成績，公開頁面不顯示姓名或座號。';
     $('leader-title').textContent=`🏆 ${state.category}｜${MODES[state.mode]} 排行榜`;
     const body=$('leaderboard');body.replaceChildren();
